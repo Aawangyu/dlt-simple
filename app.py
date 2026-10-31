@@ -16,7 +16,6 @@ def init_db():
 
 def sync_from_third_party():
     """去第三方公开接口抓取最新数据（成功率极高，防报错）"""
-    # 使用第三方开源数据接口
     url = "https://api.pearktrue.cn/api/lottery/?type=dlt"
     try:
         resp = requests.get(url, timeout=5)
@@ -27,7 +26,6 @@ def sync_from_third_party():
                 count = 0
                 for item in data["data"]:
                     period = str(item["expect"])
-                    # 第三方接口的号码格式通常是 "01,04,11,12,18,06,11"
                     nums = [int(x) for x in item["openCode"].split(",")]
                     cur = conn.execute("INSERT OR IGNORE INTO draws VALUES (?,?,?,?,?,?,?,?)",
                         (period, nums[0], nums[1], nums[2], nums[3], nums[4], nums[5], nums[6]))
@@ -106,9 +104,13 @@ with tab2:
     st.write("在数学概率与上期重号之间寻找平衡。")
     
     if st.button("🎲 启动摇奖", type="primary"):
-        front = set(random.sample(range(1, 36), 4)) 
-        front.add(random.choice(latest[1:6]))      
-        front = sorted(list(front))
+        # 🔥 修复了可能只生成 4 个号导致报错的 Bug
+        front = random.sample(range(1, 36), 5)
+        repeat_num = random.choice(latest[1:6])
+        if repeat_num not in front:
+            front[0] = repeat_num # 强制替换一个号码，保证带有上期重号
+        front = sorted(front)
+        
         back = sorted(random.sample(range(1, 13), 2))
         
         st.success(f"### 推荐号码：前区 {front} | 后区 {back}")
